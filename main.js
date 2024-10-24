@@ -1,7 +1,8 @@
 import fastify from 'fastify';  // для написания сервера
-// import pg from '@fastify/postgres'; // для работы с бд postgresql
+import pg from '@fastify/postgres'; // для работы с бд postgresql
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import bcrypt from 'bcrypt';
 import 'dotenv/config';
 import * as users from './routes/users.js'
 
@@ -23,9 +24,9 @@ const {
 server.register(users)
 
 // внедряем бд в сервер
-// server.register(pg, {
-//   connectionString: `postgres://${ DB_USERNAME }:${ DB_PASSWORD }@${ DB_HOST }/${ DB_NAME }`
-// });
+server.register(pg, {
+  connectionString: `postgres://${ DB_USERNAME }:${ DB_PASSWORD }@${ DB_HOST }/${ DB_NAME }`
+});
 
 server.register(jwt, {
   secret: JWT_SECRET,
