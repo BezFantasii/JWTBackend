@@ -1,11 +1,11 @@
 //список функций:
-    // регистрировать пользователя 
-    // авторизовать пользователя
-    // поменять пароль
+    // регистрировать пользователя ok
+    // авторизовать пользователя ok
+    // поменять пароль ok
     // получить список пользователей ok
     // удалить пользователя ok
     // найти пользователя по айди ok
-    // забыть пользователя
+    // забыть пользователя frontend
     //проверка refresh token
     //
     //. . .
@@ -54,6 +54,50 @@ const routes = async (fastify, options) => {
       }
     })
 //post запросы
+
+  fastify.post('/users', async (request, reply) => {
+    const { phone, username, password } = request.body;
+
+    const { rows: isValidPhone } = await fastify.pg.query(`--sql
+      SELECT * FROM users
+      WHERE phone = $1;
+    `, [phone]);
+
+    if (isValidPhone.length) {
+      return reply.code(401).send({
+        message: 'Пользователь с этим номером телефона уже существует',
+      });
+    };
+
+    const { rows: user } = await fastify.pg.query(`--sql
+      SELECT * FROM users
+      WHERE username = $1;
+    `, [username]);
+
+    if (user.length) {
+      return reply.code(401).send({
+        message: 'Пользователь с этим username уже существует',
+      });
+    }
+
+    try {
+      const salt = await bcrypt.genSalt(Number(process.env.SALT_ROUNDS));
+      const hash = await bcrypt.hash(password, salt);
+      const { rowCount } = await fastify.pg.query(`--sql
+        INSERT INTO users (phone, username, password)
+        VALUES ($1, $2, $3);
+      `, [phone, username, hash]);
+
+      reply.code(201).send({
+        rowCount,
+      });
+    } catch (error) {
+      console.error(error);
+      reply.code(500).send({
+        error,
+      });
+    }
+  });
     fastify.post('/protected', async(request, reply) => {
 
     });
@@ -129,7 +173,23 @@ const routes = async (fastify, options) => {
           return reply.status(403).send({ message: 'Invalid refresh token' });
         }
       });
-     
+     fastify.post('/users/changeData/:id', async (request, reply) => {
+      const {id} = request.params
+      const { phone, username, password } = request.body;
+      try{
+        const { rows: changeData } = await fastify.pg.query(`--sql
+          UPDATE users
+          SET phone = $1,
+              username = $2,
+              password = $3
+          WHERE user_id =$4
+        `, [phone, username, password, id]);
+        return changeData
+      }catch(e){
+        reply.code(500).send(e)
+      }
+
+    })
 //delete запросы
   fastify.delete('/users/delete/:id', async (request, reply) => {
     const {id} = request.params;
